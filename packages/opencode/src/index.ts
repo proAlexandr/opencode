@@ -27,6 +27,12 @@ import { WebCommand } from "./cli/cmd/web"
 import { PrCommand } from "./cli/cmd/pr"
 import { SessionCommand } from "./cli/cmd/session"
 
+const isInsideBunBinary = typeof OPENCODE_VERSION === 'string'
+if (isInsideBunBinary) {
+  // This file is build dynamically in packages/opencode/script/build.ts
+  require('./src/serveWeb.ts')
+}
+
 process.on("unhandledRejection", (e) => {
   Log.Default.error("rejection", {
     e: e instanceof Error ? e.message : e,

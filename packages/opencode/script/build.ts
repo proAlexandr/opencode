@@ -5,6 +5,7 @@ import path from "path"
 import fs from "fs"
 import { $ } from "bun"
 import { fileURLToPath } from "url"
+import { readdir } from "node:fs/promises";
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
@@ -127,6 +128,56 @@ for (const item of targets) {
   const bunfsRoot = item.os === "win32" ? "B:/~BUN/root/" : "/$bunfs/root/"
   const workerRelativePath = path.relative(dir, parserWorker).replaceAll("\\", "/")
 
+  await Bun.spawn(["bun", "run", "build"], {
+    cwd: "../app",
+    stdout: "inherit",
+    stderr: "inherit",
+  }).exited;
+
+  const files = await readdir("../app/dist", { recursive: true, withFileTypes: true });
+  let importFilesScriptPart = ""
+  let routesScriptPart = ""
+  for (let i = 0; i < files.length; ++i) {
+    const file = files[i]
+    if (file.isFile()) {
+      const serveBlob = file.name.endsWith('.woff') || file.name.endsWith('.woff2')
+      const path = file.parentPath + "/" + file.name;
+      const route = path.substring(11) // cut ../app/dist
+      let header = ""
+      if (file.name.endsWith('.js')) {
+        header = ", jsHeader"
+      }
+      if (file.name.endsWith('.css')) {
+        header = ", cssHeader"
+      }
+      if (serveBlob) {
+        importFilesScriptPart += `import file${i} from '${path}'\n`
+        routesScriptPart += `'${route}': new Response(Bun.file(file${i})),\n`
+      } else {
+        importFilesScriptPart += `import file${i} from '${path}' with { type: 'text' }\n`
+        routesScriptPart += `'${route}': new Response(file${i}${header}),\n`
+      }
+    }
+  }
+
+  const serveWebScript = `
+    import indexFile from '../app/dist/index.html' with { type: 'text' }
+    ${importFilesScriptPart}
+
+    const httpHeader = { headers: { 'Content-Type': 'text/html;charset=utf-8'}}
+    const jsHeader = { headers: { 'Content-Type': 'text/javascript;charset=utf-8'}}
+    const cssHeader = { headers: { 'Content-Type': 'text/css;charset=utf-8'}}
+    const routes = {
+      '/': new Response(indexFile, httpHeader),
+      ${routesScriptPart}
+    }
+
+    Bun.serve({
+      port: 3000,
+      routes
+    });
+  `
+
   await Bun.build({
     conditions: ["browser"],
     tsconfig: "./tsconfig.json",
@@ -142,6 +193,9 @@ for (const item of targets) {
       outfile: `dist/${name}/bin/opencode`,
       execArgv: [`--user-agent=opencode/${Script.version}`, "--use-system-ca", "--"],
       windows: {},
+    },
+    files: {
+      "./src/serveWeb.ts": serveWebScript
     },
     entrypoints: ["./src/index.ts", parserWorker, workerPath],
     define: {
