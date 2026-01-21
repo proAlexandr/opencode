@@ -15,7 +15,7 @@
       "diffDelete": "#fc533a"
     },
     "overrides": {
-      "background-base": "#f8f7f7",
+      "background-base": "#ffffff",
       "background-weak": "var(--smoke-light-3)",
       "background-strong": "var(--smoke-light-1)",
       "background-stronger": "#fcfcfc",
@@ -84,7 +84,7 @@
       "input-selected": "var(--cobalt-light-4)",
       "input-focus": "var(--cobalt-light-1)",
       "input-disabled": "var(--smoke-light-4)",
-      "text-base": "var(--smoke-light-11)",
+      "text-base": "var(--smoke-dark-1)",
       "text-weak": "var(--smoke-light-9)",
       "text-weaker": "var(--smoke-light-8)",
       "text-strong": "var(--smoke-light-12)",
